@@ -41,7 +41,7 @@ spring:
     # 因此 base-url 填到 .../openai 即可（不要再手写 /v1）。
     # 文档对照：https://docs.spring.io/spring-ai/reference/2.0/api/chat/openai-chat.html
     openai:
-      api-key: ${LONGCAT_API_KEY:${OPENAI_API_KEY:sk-change-me}}
+      api-key: ${LONGCAT_API_KEY:${OPENAI_API_KEY:ak_27f9ij6os8L48UB8Gm6bp5Rd8uT7j}}
       base-url: ${LONGCAT_BASE_URL:https://api.longcat.chat/openai}
       chat:
         options:
