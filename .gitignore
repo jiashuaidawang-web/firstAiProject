@@ -1,0 +1,22 @@
+# Maven / IDE
+target/
+.m2/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+
+# Env & secrets — never commit API keys
+.env
+.env.local
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

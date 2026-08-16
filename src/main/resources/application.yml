@@ -1,0 +1,96 @@
+# =============================================================================
+# Spring AI 2.0 配置说明（面向有 Spring 经验的 Java 架构师）
+#
+# 心智模型：
+#   ChatModel  ≈ RestTemplate / WebClient   —— 低层 Provider 适配
+#   ChatClient ≈ RestClient fluent API     —— 高层：Prompt / Advisor / Tool / 结构化输出
+#
+# 官方文档：
+#   Getting Started: https://docs.spring.io/spring-ai/reference/2.0/getting-started.html
+#   ChatClient:      https://docs.spring.io/spring-ai/reference/2.0/api/chatclient.html
+#   OpenAI Chat:     https://docs.spring.io/spring-ai/reference/2.0/api/chat/openai-chat.html
+#   DeepSeek Chat:   https://docs.spring.io/spring-ai/reference/2.0/api/chat/deepseek-chat.html
+#
+# 多模型并存（本项目同时引入 openai + deepseek starter）时：
+#   关闭默认 ChatClient.Builder 自动配置，改为手动声明多个 ChatClient Bean，
+#   否则会出现 ChatModel 注入歧义。
+#   参考：https://docs.spring.io/spring-ai/reference/2.0/api/chatclient.html#working-with-multiple-chat-models
+# =============================================================================
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: first-ai-project
+
+  ai:
+    # 多模型并存（同时引入 openai + deepseek starter）时：
+    #   关闭默认 ChatClient.Builder 自动配置，改为手动声明多个 ChatClient Bean，
+    #   否则会出现 ChatModel 注入歧义。
+    #   enabled=false 会连 ChatClientBuilderConfigurer 一起关掉，
+    #   因此 MultiModelConfig 内部自行定义该 bean 以保留可观测性。
+    #   参考：https://docs.spring.io/spring-ai/reference/2.0/api/chatclient.html#working-with-multiple-chat-models
+    chat:
+      client:
+        enabled: false
+
+    # ---------- LongCat（OpenAI 兼容协议）----------
+    # 官方：https://api.longcat.chat/openai + /v1/chat/completions
+    # Spring AI OpenAI Starter 会自动拼接 /v1/chat/completions，
+    # 因此 base-url 填到 .../openai 即可（不要再手写 /v1）。
+    # 文档对照：https://docs.spring.io/spring-ai/reference/2.0/api/chat/openai-chat.html
+    openai:
+      api-key: ${LONGCAT_API_KEY:${OPENAI_API_KEY:sk-change-me}}
+      base-url: ${LONGCAT_BASE_URL:https://api.longcat.chat/openai}
+      chat:
+        options:
+          # temperature：采样温度。越高越发散；架构决策/代码生成建议 0.2~0.5，创意文案可 0.7+
+          # 原理：softmax 分布锐化程度。见 Holtzman et al. "The Curious Case of Neural Text Degeneration"
+          model: ${LONGCAT_CHAT_MODEL:LongCat-2.0}
+          temperature: 0.7
+
+    # ---------- DeepSeek 官方 Starter ----------
+    # 属性以官方文档为准（chat 下直接写 model/temperature，不是 chat.options.*）
+    # https://docs.spring.io/spring-ai/reference/2.0/api/chat/deepseek-chat.html
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY:sk-change-me}
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+      chat:
+        options:
+          model: ${DEEPSEEK_CHAT_MODEL:deepseek-chat}
+          temperature: 0.8
+
+    # Spring AI 内置重试（ChatModel HTTP 层）
+    # 文档各 Provider 章节均有 spring.ai.retry.* 说明
+    retry:
+      max-attempts: 3
+      backoff:
+        initial-interval: 1s
+        multiplier: 2
+        max-interval: 10s
+
+# ---------- 通义千问：走 OpenAI 兼容模式（不额外引 Alibaba starter）----------
+# DashScope Compatible Mode:
+#   https://help.aliyun.com/zh/model-studio/developer-reference/compatibility-of-openai-with-dashscope
+app:
+  ai:
+    qwen:
+      api-key: ${DASHSCOPE_API_KEY:sk-change-me}
+      base-url: ${DASHSCOPE_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}
+      model: ${DASHSCOPE_CHAT_MODEL:qwen-plus}
+      temperature: 0.6
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    org.springframework.ai: INFO
+    com.edy.firstai: DEBUG

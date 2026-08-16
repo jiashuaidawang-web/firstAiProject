@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spring AI SSE Demo</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --accent: #3d9cfd;
+      --border: #2a3a52;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #1c3b5c 0%, transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, #243048 0%, transparent 50%),
+        var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    main {
+      width: min(720px, 100%);
+    }
+    h1 {
+      font-family: "IBM Plex Serif", Georgia, serif;
+      font-weight: 600;
+      font-size: 1.75rem;
+      margin: 0 0 8px;
+    }
+    p { color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
+    .row { display: flex; gap: 10px; margin-bottom: 16px; }
+    input {
+      flex: 1;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 1rem;
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      background: var(--accent);
+      color: #041018;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    #result {
+      min-height: 220px;
+      white-space: pre-wrap;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Spring AI · SSE 流式对话</h1>
+  <p>对接 <code>/api/stream/chat</code>。EventSource 适合 GET SSE；生产复杂场景可用 fetch + ReadableStream。</p>
+  <div class="row">
+    <input id="prompt" value="用三句话解释 Spring AI 的 ChatClient" />
+    <button id="start">开始流式</button>
+  </div>
+  <div id="result"></div>
+</main>
+<script>
+  let source;
+  const result = document.getElementById('result');
+  const startBtn = document.getElementById('start');
+
+  startBtn.addEventListener('click', () => {
+    if (source) source.close();
+    result.textContent = '';
+    startBtn.disabled = true;
+
+    const prompt = encodeURIComponent(document.getElementById('prompt').value);
+    // Spring MVC 对 Flux<String> 的 SSE：默认 data: 行即为字符串内容
+    source = new EventSource('/api/stream/chat?prompt=' + prompt);
+
+    source.onmessage = (event) => {
+      // 若服务端推的是纯文本 chunk，直接拼接；若是 JSON 再 JSON.parse
+      result.textContent += event.data;
+    };
+
+    source.onerror = () => {
+      source.close();
+      startBtn.disabled = false;
+    };
+  });
+</script>
+</body>
+</html>
