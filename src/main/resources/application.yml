@@ -18,7 +18,7 @@
 # =============================================================================
 
 server:
-  port: 8080
+  port8080
 
 spring:
   application:
@@ -41,7 +41,7 @@ spring:
     # 因此 base-url 填到 .../openai 即可（不要再手写 /v1）。
     # 文档对照：https://docs.spring.io/spring-ai/reference/2.0/api/chat/openai-chat.html
     openai:
-      api-key: ${LONGCAT_API_KEY:${OPENAI_API_KEY:ak_27f9ij6os8L48UB8Gm6bp5Rd8uT7j}}
+      api-key: ${LONGCAT_API_KEY:${OPENAI_API_KEY:ak_2oL9Dg5e49f63R29uF3jh26y4NV9q}}
       base-url: ${LONGCAT_BASE_URL:https://api.longcat.chat/openai}
       chat:
         options:
