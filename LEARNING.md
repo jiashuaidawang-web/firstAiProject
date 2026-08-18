@@ -2,7 +2,13 @@
 
 面向 **10 年 Java 架构师转 AI Agent 应用架构**。目标不是「会调 Chat API」，而是能独立负责一条 **可上线、可分布式部署、可抗高并发、可观测、可计价、可降级** 的 Agent 产品线。
 
-本仓库是 **第 0 课（ChatClient 接入层）**。后续每一阶段都按「能力 → 架构决策 → 生产验收标准 → 文档/论文」组织，而不是按教程目录堆 API。
+**毕业项目（唯一主战场）**：Quant Agent Platform ——「一个人 + 一支 24 小时 AI 量化投研团队」。  
+协作关系见 [QUANT_ARCHITECTURE.md](./QUANT_ARCHITECTURE.md)。  
+边界：工程化研究闭环 ≠ 天然赚钱。
+
+本仓库是 **第 0 课（ChatClient 接入层）**。每一阶段产出的不是新 Demo 仓库，而是 **同一平台的一个可运行版本**，并绑定一个（组）量化 Agent 作为验收。
+
+后续每一阶段都按「Agent 技术 → 量化验收 Agent → 生产门槛 → 文档/论文」组织。
 
 ---
 
@@ -182,6 +188,9 @@ LLM 调用是 **高延迟 IO（秒级）**，不是你熟悉的 20ms RPC。
 - [ ] DeepSeek / Qwen 未配置时不要在启动期硬失败（可选模型）
 - [ ] 压测：同步 QPS、SSE 并发连接、错误注入
 
+**量化验收 Agent（平台 v0.1）**：**MarketBriefAgent**  
+输入一句话研究目标，流式输出 + **结构化市场简报 JSON**（标的、逻辑、不确定点、下一步建议）。无工具、不查真实行情——先把接入层、契约、SSE、观测打成可运维骨架。
+
 **文档**：Spring AI Getting Started、ChatClient、OpenAI Chat（兼容协议接入 LongCat）。
 
 ---
@@ -212,6 +221,9 @@ LLM 调用是 **高延迟 IO（秒级）**，不是你熟悉的 20ms RPC。
 - Yao et al., *ReAct*, ICLR 2023
 - Schick et al., *Toolformer*, 2023
 
+**量化验收 Agent（平台 v0.2）**：**MarketDataAgent** + **DataQualityAgent**  
+工具拉行情/资金流；质量 Agent 检查缺失、重复、时间错位、源冲突。Research 不得使用未打质量标记的数据。Trace 必须能看到每个 tool span。
+
 **市场对应岗位技能**：Function Calling、MCP Server/Client、Agent Loop。
 
 ---
@@ -233,6 +245,9 @@ LLM 调用是 **高延迟 IO（秒级）**，不是你熟悉的 20ms RPC。
 - 扩容/重启后会话仍在
 - 超长会话费用可控（有摘要，不无限拼接）
 - 用户「忘记刚才说的」可复现、可定位是截断还是丢消息
+
+**量化验收 Agent（平台 v0.3）**：**ResearchMemoryAgent**  
+同一 `researchId` 下：假设、中间结论、已跑实验可恢复；扩容/重启不丢。窗口满了要摘要，禁止无限拼接 K 线进 Prompt。
 
 **文档**：Spring AI Chat Memory；LangChain Memory / LangGraph Checkpointer。
 
@@ -263,6 +278,9 @@ LLM 调用是 **高延迟 IO（秒级）**，不是你熟悉的 20ms RPC。
 - Lewis et al., *Retrieval-Augmented Generation*, NeurIPS 2020
 - Gao et al., *RAG 综述 / 进阶实践*（检索失败是主因，不是模型不够大）
 
+**量化验收 Agent（平台 v0.4）**：**NewsAgent** + **FundamentalAgent**（可含 Industry 知识库）  
+财报/公告/研报 RAG，答案必须带 citation；分数不够要拒答。ACL：租户/权限过滤在检索阶段强制。不可信网页/公告与系统指令隔离（防间接注入）。
+
 ---
 
 ### 阶段 4 — 编排：图、多 Agent、工作流、HITL
@@ -288,6 +306,9 @@ LLM 调用是 **高延迟 IO（秒级）**，不是你熟悉的 20ms RPC。
 
 **论文**：Wu et al., *AutoGen*；Hong et al., *MetaGPT*（学组织方式，不要学「无边界多 Agent 聊天」上生产）。
 
+**量化验收 Agent（平台 v0.5）**：**Quant Supervisor（雏形）** + Research 小队（Technical / Industry / Sentiment）  
+Supervisor 只拆任务、选 Agent、汇总，自己不写研报。长研究任务走 `taskId` + Worker。高风险动作 HITL。仍 **禁止** 调用 Execution。
+
 ---
 
 ### 阶段 5 — 可靠性与流量治理（生产底座）
@@ -309,6 +330,9 @@ Spring Framework 7 / Boot 4：优先用 `org.springframework.core.retry` 与弹�
 - 故障演练：Provider 500、429、超时、半开流式
 - 降级路径有指标，能自动切回
 - 无雪崩：下游慢时自己先限流
+
+**量化验收 Agent（平台 v0.6）**：**StrategyAgent** + **BacktestAgent**  
+策略产出可回测规格（结构化）；回测是长任务：排队、可查询、可取消、可重试（仅引擎暂态失败）。Python Quant Engine 只通过 Tool Gateway 调用。回测失败有死信，不把 API 线程占满。
 
 ---
 
@@ -342,6 +366,9 @@ Spring Framework 7 / Boot 4：优先用 `org.springframework.core.retry` 与弹�
 - 能回答 CFO：这个功能上周花了多少钱、单位任务成本趋势
 - 改 Prompt 有版本号，可回滚，评测分数可对比
 
+**量化验收 Agent（平台 v0.7）**：**BacktestAnalystAgent** + **FactorResearchAgent** + 评测集  
+回测结果自动归因（确定性指标断言 + 有限的 LLM 解释）。因子 IC/IR/衰减进回归集。Optimizer 若出现：必须有过拟合/重复实验预算，禁止无上限搜参。成本按 `researchId` 可账单。
+
 ---
 
 ### 阶段 7 — 安全与合规（Agent 比普通 API 危险）
@@ -358,6 +385,9 @@ Spring Framework 7 / Boot 4：优先用 `org.springframework.core.retry` 与弹�
 
 参考：OWASP LLM Top 10；NVIDIA/学术界关于 indirect prompt injection 的工作。
 
+**量化验收 Agent（平台 v0.8）**：**RiskAgent（独立否决权）** + **PortfolioAgent**  
+Strategy 不能自己放行。Risk 输出通过/拒绝+原因。红队：恶意公告诱使「直接下单」必须失败。Execution 代码可以存在，但 **未过 Risk Gate + HITL 不得连通券商**。
+
 ---
 
 ### 阶段 8 — 交付、灰度、平台化（架构师本职）
@@ -372,23 +402,31 @@ Spring Framework 7 / Boot 4：优先用 `org.springframework.core.retry` 与弹�
 
 **生产验收**：完整走一遍「改 Prompt → 评测 → 灰度 5% → 全量 → 回滚」；K8s 上滚动发布不丢会话。
 
+**量化验收 Agent（平台 v1.0）**：**MonitoringAgents** + **ExecutionAgent（仅模拟/纸交易，经 Risk Gate）**  
+监控发现失效 → 事件回 Supervisor → 重开投研环。交易环与投研环隔离。密钥托管、审计、HPA 按队列深度。此时才叫 Quant Agent Platform 毕业版，而不是 Agent Demo 合集。
+
 ---
 
-## 4. 建议用本仓库演进的里程碑（项目级，而不是另起一套 Demo）
+## 4. 阶段 = 同一平台的版本，不是一堆 Demo
 
-把 `firstAiProject` 当成要上线的 Agent 服务演进，而不是每课一个玩具。
+判断「学到的是 Demo 还是生产级」的方法只有一个：**每个阶段交付可运行的平台版本，并带生产门槛。**  
+10 个独立玩具仓库无法验收，因为标准每次都在漂。
 
-| 里程碑 | 交付物 | 对应阶段 |
-|--------|--------|----------|
-| M0 | 本仓库：Chat / SSE / 结构化 / 多模型 / 重试 / 指标 | 0 |
-| M1 | Tool Calling + 最大步数 + Trace 打通 tool span | 1 |
-| M2 | Redis 会话记忆 + conversationId + 分布式锁 | 2 |
-| M3 | 一个有权限过滤的 RAG 知识库 + 引用 | 3 |
-| M4 | 长任务 `taskId` + Worker + 可查询状态；高风险工具 HITL | 4–5 |
-| M5 | 租户限流、熔断降级、成本预算、评测集 CI | 5–6 |
-| M6 | K8s 部署清单、HPA 按队列深度、密钥托管、审计 | 7–8 |
+| 版本 | Agent 技术阶段 | 必须交出的量化 Agent | 这一版若只有聊天、没有契约，就算失败 |
+|------|----------------|----------------------|--------------------------------------|
+| v0.1 | 0 接入层 | MarketBriefAgent | 无结构化简报、无 SSE、无基础指标 |
+| v0.2 | 1 Tool | MarketData + DataQuality | 无工具审计/超时，或 Research 可用脏数据 |
+| v0.3 | 2 Memory | ResearchMemoryAgent | 重启丢假设、无 researchId |
+| v0.4 | 3 RAG | News + Fundamental | 无引用、无 ACL、不能拒答 |
+| v0.5 | 4 编排 | Supervisor 雏形 + Technical/Industry/Sentiment | Supervisor 自己写研报，或同步卡死长任务 |
+| v0.6 | 5 可靠性 | Strategy + Backtest（Worker） | 回测占满 API 线程，或不可取消 |
+| v0.7 | 6 观测/评测/成本 | BacktestAnalyst + Factor + 评测 CI | 只看感觉、无回归、无成本账 |
+| v0.8 | 7 安全 | Risk（否决权）+ Portfolio | 策略自评自过，或 LLM 能碰到下单接口 |
+| v1.0 | 8 平台化 | Monitoring 闭环 + Execution（纸交易+闸） | 无灰度/审计/队列 HPA |
 
-每一里程碑都必须带：**压测报告、故障演练记录、SLO 面板截图、评测分数**。缺这四样就不算「可上线」。
+压测报告、故障演练、SLO 面板、评测分数：缺一样，该版本就还是 Demo。
+
+与常见「Prompt→RAG→Tool→Multi-Agent」课表的对应：顺序必须是 **先工具与数据质量，再记忆与 RAG，再 Supervisor，最后才 Execution**。倒过来先堆多智能体，量化上会先出「会聊天的错误下单」。
 
 ---
 
@@ -434,9 +472,11 @@ Spring Framework 7 / Boot 4：优先用 `org.springframework.core.retry` 与弹�
 
 ---
 
-## 7. 与本仓库 README 的关系
+## 7. 与本仓库文档的关系
 
-- `README.md`：怎么把 **第 0 课** 跑起来。
-- `LEARNING.md`（本文）：怎么从第 0 课长成 **可上线的 Agent 应用架构**。
+- `README.md`：第 0 课怎么跑起来。
+- `QUANT_ARCHITECTURE.md`：量化团队怎么配合、两条环、否决权。
+- `LEARNING.md`（本文）：Agent 技术阶段如何变成平台 v0.1–v1.0。
 
-学习顺序：**先把 M0 的缺口补成可运维接入层，再做 Tool，再做 Memory/RAG，最后才是多 Agent。** 倒过来堆多智能体，是目前市场上 Demo 很多、生产事故也很多的原因。
+学习顺序：**数据工具与质量 → 记忆/RAG → Supervisor 与投研小队 → 回测长任务 → 独立风控 → 监控闭环。**  
+最后才接 Execution。倒过来堆多智能体，是 Demo 很多、生产事故也很多的原因。

@@ -109,11 +109,10 @@ mvn spring-boot:run
 
 本 README 只覆盖 **第 0 课（ChatClient 接入层）** 的启动与 API。
 
-完整的 **架构级、可上线、可分布式、高并发、可观测** 生产学习路线见：
+完整的 **架构级、可上线** 学习路线与量化毕业项目：
 
-**[LEARNING.md](./LEARNING.md)**
-
-其中包含：能力地图、参考架构、M0–M6 里程碑、生产验收标准、安全与成本 SLO。不要倒过来先堆多 Agent。
+- **[LEARNING.md](./LEARNING.md)** — 阶段 = 平台版本 + 量化 Agent 验收
+- **[QUANT_ARCHITECTURE.md](./QUANT_ARCHITECTURE.md)** — 量化多 Agent 如何配合（投研环 / 交易环）
 
 ## 项目结构
 
