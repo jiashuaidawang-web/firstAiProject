@@ -105,12 +105,15 @@ mvn spring-boot:run
 - Zheng et al., *Judging LLM-as-a-Judge*, NeurIPS 2023 — 多模型评测
 - OpenTelemetry [GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
 
-## 建议学习路径（从架构师到 Agent 架构）
+## 学习路线
 
-1. **本仓库**：ChatClient、流式、结构化输出、多模型路由、重试与指标  
-2. **下一步**：Tool Calling（Function Calling）+ Advisor 链（Spring AI 2.0 把 tool-loop 提升为一等公民）  
-3. **再下一步**：Chat Memory、RAG（向量库）、评测与 Tracing  
-4. **目标态**：多 Agent 编排、人机协同、成本/延迟/质量的 SLO
+本 README 只覆盖 **第 0 课（ChatClient 接入层）** 的启动与 API。
+
+完整的 **架构级、可上线、可分布式、高并发、可观测** 生产学习路线见：
+
+**[LEARNING.md](./LEARNING.md)**
+
+其中包含：能力地图、参考架构、M0–M6 里程碑、生产验收标准、安全与成本 SLO。不要倒过来先堆多 Agent。
 
 ## 项目结构
 
