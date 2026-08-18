@@ -13,6 +13,9 @@ target/
 .env.local
 *.pem
 
+# 手写阶段答案，避免对照前误提交
+learn/**/MY_ANSWERS.md
+
 # OS
 .DS_Store
 Thumbs.db

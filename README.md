@@ -111,7 +111,7 @@ mvn spring-boot:run
 
 完整的 **架构级、可上线** 学习路线与量化毕业项目：
 
-- **[LEARNING.md](./LEARNING.md)** — 阶段 = 平台版本 + 量化 Agent 验收
+- **[learn/README.md](./learn/README.md)** — 每阶段：提示词、必懂、验收题（答案分开）
 - **[QUANT_ARCHITECTURE.md](./QUANT_ARCHITECTURE.md)** — 量化多 Agent 如何配合（投研环 / 交易环）
 
 ## 项目结构

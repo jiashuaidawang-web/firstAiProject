@@ -26,6 +26,12 @@
 
 时间分配建议：**写代码 70%，官方文档 20%，论文 10%（只读摘要和那张循环图）。**
 
+**分阶段开挂学习包（怎么学 / 提示词 / 必懂 / 验收题 / 标准答案）在：**
+
+**[learn/README.md](./learn/README.md)**
+
+每个阶段三份文件：`STUDY.md` → `QUESTIONS.md` → 最后才打开 `ANSWERS.md`。手写答案用 `MY_ANSWERS.md`（不入库）。
+
 不要做的事：
 
 - 并行开 RAG、Memory、Multi-Agent
@@ -562,6 +568,7 @@ firstAiProject/          # 或改名为 quant-agent-platform
 
 - `README.md`：第 0 课怎么跑起来。
 - `QUANT_ARCHITECTURE.md`：量化团队怎么配合、两条环、否决权。
+- `learn/`：每阶段怎么学、Cursor 提示词、必懂核心、验收题与标准答案
 - `LEARNING.md`（本文）：Agent 技术阶段如何变成平台 v0.1–v1.0。
 
 学习顺序：**数据工具与质量 → 记忆/RAG → Supervisor 与投研小队 → 回测长任务 → 独立风控 → 监控闭环。**  
