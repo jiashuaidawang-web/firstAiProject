@@ -12,6 +12,32 @@
 
 ---
 
+## 怎么学（Agent 零基础、Java 架构不零）
+
+你的优势是分布式、接口契约、失败模式；缺口是 **模型会撒谎、会乱调工具**。高效方法不是先看完 Spring AI / LangChain，而是每个阶段只走这一圈：
+
+```
+1. 先跑通：本阶段最小能调的接口（当天）
+2. 再对照：官方文档里对应的 1 页 + 一个心智模型
+3. 再硬化：超时 / 失败 / 越权 / 观测（生产门槛）
+4. 才验收：量化 Agent 的结构化契约
+5. 没过清单：不准进入下一阶段
+```
+
+时间分配建议：**写代码 70%，官方文档 20%，论文 10%（只读摘要和那张循环图）。**
+
+不要做的事：
+
+- 并行开 RAG、Memory、Multi-Agent
+- 为「学 MCP」单独开仓库
+- 一上来实现全部 Research Agent
+- 把工具做成万能 `executeSql` / `httpGet(url)`
+
+阶段 0 还没对 LongCat 成功打过一轮对话、没见过 `.entity()` 的 JSON，不要进阶段 1。接入层都没摸到，Tool 循环你会看不懂。
+
+
+---
+
 ## 0. 毕业标准（什么叫架构级、什么叫可上线）
 
 你可以对外签字的系统，至少同时满足：
@@ -223,6 +249,33 @@ LLM 调用是 **高延迟 IO（秒级）**，不是你熟悉的 20ms RPC。
 
 **量化验收 Agent（平台 v0.2）**：**MarketDataAgent** + **DataQualityAgent**  
 工具拉行情/资金流；质量 Agent 检查缺失、重复、时间错位、源冲突。Research 不得使用未打质量标记的数据。Trace 必须能看到每个 tool span。
+
+**本阶段怎么学（示范，约 5–7 天）**：
+
+1. **心智模型（2 小时，先画再写）**  
+   模型不执行 Java。它只输出「我要调哪个工具、参数是什么」；`ToolCallingAdvisor` 在你进程里真正调用，把结果塞回对话再问模型。把它当成 **不可信的 RPC 客户端**。  
+   文档只读：[ChatClient](https://docs.spring.io/spring-ai/reference/2.0/api/chatclient.html) 的 Tool 小节 + 你用的模型章节里 Tool Calling。ReAct 论文扫摘要即可。
+
+2. **最小闭环（1 天）**  
+   本仓库加 **一个** `@Tool`：`getDailyBar(symbol, tradeDate)`，先返回写死的一根 K 线。  
+   `chatClient.prompt().user("查 600519 今天收盘价").tools(...).call()`。  
+   日志里必须看到：模型提出 tool call → 你的方法被调用 → 第二次模型调用 → 自然语言/JSON 答案。看不到这三步，等于没学会。
+
+3. **换成真工具（1–2 天）**  
+   工具改成你现有数据源（哪怕 CSV / 东方财富公开接口）。入参用 record + 校验。超时、失败返回结构化错误，不要抛一串 HTML。  
+   再加第二个工具 `assertBarQuality(symbol, tradeDate)`（缺字段、成交量为 0、日期错位）。这就是 DataQuality 的最小形态——**两个工具，不是两个微服务**。
+
+4. **循环熔断（1 天）**  
+   故意让模型需要多次调用；设 `maxToolCalls`（先 5）。注入失败：工具超时、返回空。验收：不死循环，用户看到降级说明。
+
+5. **生产门槛（1 天）**  
+   工具调用打审计日志（谁、哪个 symbol、耗时、成功失败）。越权 symbol 或未开放工具名直接拒绝。Trace 里模型 span 和 tool span 分开。读工具可重试，写工具这阶段先不要有。
+
+6. **验收接口**  
+   `GET /api/quant/market?symbol=600519`：返回带 `quality=PASS|FAIL` 的结构化行情。FAIL 时研报接口必须拒绝往下编。这才算 v0.2，不是「模型会说话了」。
+
+MCP 这阶段 **只需要知道它是「工具的 USB 协议」**，先不实现 Server。
+
 
 **市场对应岗位技能**：Function Calling、MCP Server/Client、Agent Loop。
 
