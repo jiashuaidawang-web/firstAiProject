@@ -428,6 +428,39 @@ Strategy 不能自己放行。Risk 输出通过/拒绝+原因。红队：恶意�
 
 与常见「Prompt→RAG→Tool→Multi-Agent」课表的对应：顺序必须是 **先工具与数据质量，再记忆与 RAG，再 Supervisor，最后才 Execution**。倒过来先堆多智能体，量化上会先出「会聊天的错误下单」。
 
+### 写在几个项目里？
+
+**学习阶段不要拆成 9 个仓库。** 拆了你就无法验收「是不是同一套架构在变强」，只会留下 9 个半残 Demo。
+
+推荐形态（适合你现在一个人把平台打磨出来）：
+
+| 怎么拆 | 建议 | 原因 |
+|--------|------|------|
+| Git 仓库 | **一个 monorepo** | 契约、评测、版本号（v0.1–v1.0）在一处演进 |
+| Java / Spring AI | **一个可运行应用**（本仓库长成平台） | Agent 是模块，不是微服务；ChatClient、观测、鉴权只该有一份 |
+| Python 回测引擎 | **同仓不同目录**，进程独立 | 运行时不同；经 Tool Gateway 调用，不要和 JVM 揉成一个进程 |
+| 部署单元 | 前期 1 个 App；回测变慢再拆 Worker；上交易再把 Execution **单独部署** | 按隔离需求拆进程，不按 Agent 名字拆服务 |
+
+目录可以长成这样，仍然是「一个项目」：
+
+```
+firstAiProject/          # 或改名为 quant-agent-platform
+  src/                   # Spring AI：API、Supervisor、各 Agent、Tool Gateway
+  quant-engine/          # Python：回测/因子，独立进程
+  eval/                  # 评测集与回归
+  deploy/                # 以后的 compose / k8s
+```
+
+代码上按 **领域模块** 分包（`data` / `research` / `strategy` / `risk` / `execution`），不要 `agent1-project`、`agent2-project`。
+
+只有这些情况才新增 **第二个可部署服务**：
+
+1. 回测/优化把 API 和 SSE 拖死 → 拆 `quant-worker`
+2. 真要碰券商 → `execution` 独立进程、独立密钥、独立网络，Risk Gate 之外谁也调不到
+3. 向量检索或行情 ETL 需要独立扩缩容
+
+在此之前，**一个 Spring Boot 应用 + 一个 Python 引擎** 就是生产级的合理起点，不是「不够架构」。过早按 Agent 拆微服务，才是 Demo 心态换了件西装。
+
 ---
 
 ## 5. 架构决策清单（面试/设计评审会问的）
