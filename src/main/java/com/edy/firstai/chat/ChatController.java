@@ -13,10 +13,10 @@ import java.util.Map;
 /**
  * ChatClient 同步对话示例。
  *
- * <h2>原理：一次 Chat Completion 请求在做什么？</h2>
+ * <h2>原理：一次 Chat Completion-完成 请求在做什么？</h2>
  * <ol>
  *   <li>组装 Prompt = SystemMessage? + UserMessage(+ History)</li>
- *   <li>经 Advisor 链（Spring AI 2.0 把 tool-loop / structured-output-retry 都提升为可组合 Advisor）</li>
+ *   <li>经 Advisor-顾问 链（Spring AI 2.0 把 tool-loop / structured-output-retry 都提升为可组合 Advisor）</li>
  *   <li>ChatModel 调用 Provider HTTP API（/v1/chat/completions）</li>
  *   <li>返回 assistant content（以及 usage / finishReason 等元数据）</li>
  * </ol>
@@ -26,7 +26,7 @@ import java.util.Map;
  *
  * 对照论文 / 概念：
  * <ul>
- *   <li>System / User / Assistant 角色来自 InstructGPT / ChatML 实践：
+ *   <li>System / User / Assistant-辅助 角色来自 InstructGPT-指示 / ChatML 实践：
  *       Ouyang et al., "Training language models to follow instructions with human feedback" (InstructGPT), NeurIPS 2022</li>
  *   <li>temperature 控制采样随机性：Holtzman et al., "The Curious Case of Neural Text Degeneration", ICLR 2020</li>
  * </ul>
