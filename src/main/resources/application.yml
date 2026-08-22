@@ -43,6 +43,12 @@ spring:
     openai:
       api-key: ${LONGCAT_API_KEY:${OPENAI_API_KEY:ak_2oL9Dg5e49f63R29uF3jh26y4NV9q}}
       base-url: ${LONGCAT_BASE_URL:https://api.longcat.chat/openai}
+      # LLM HTTP 整体 read timeout（OkHttp 层）。
+      # 默认 60s；LongCat 生成较长研究简报时易超，收到 408/ReadTimeoutException 可调大。
+      # 这是【HTTP 客户端层】超时：覆盖一次 /v1/chat/completions 请求的读取上限。
+      # 注意：它只管「单次 HTTP 请求读多久没字节」，不管「业务 SLA」（后者要在业务层另加）。
+      # 文档：https://docs.spring.io/spring-ai/reference/2.0/api/chat/openai-chat.html
+      timeout: 50s
       chat:
         options:
           # temperature：采样温度。越高越发散；架构决策/代码生成建议 0.2~0.5，创意文案可 0.7+
@@ -53,6 +59,9 @@ spring:
     # ---------- DeepSeek 官方 Starter ----------
     # 属性以官方文档为准（chat 下直接写 model/temperature，不是 chat.options.*）
     # https://docs.spring.io/spring-ai/reference/2.0/api/chat/deepseek-chat.html
+    # 阶段 0 备注：DeepSeek 能否成为 bean，取决于 @ConditionalOnProperty(spring.ai.model.chat=deepseek)。
+    #   未配置时 MultiModelConfig 用 ObjectProvider 跳过，不会启动失败（详见 MultiModelConfig）。
+    # 注意：DeepSeek 自动配置未暴露 timeout 属性，其 HTTP 读取超时走 RestClient/WebClient 默认值。
     deepseek:
       api-key: ${DEEPSEEK_API_KEY:sk-change-me}
       base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
@@ -75,7 +84,11 @@ spring:
 #   https://help.aliyun.com/zh/model-studio/developer-reference/compatibility-of-openai-with-dashscope
 app:
   ai:
+    # 是否启用通义千问 Provider。默认 false：qwenChatModel / qwenChatClient bean 都不创建，
+    # 应用启动只依赖 LongCat。显式设 true 并配好下方 key 后才会出现。
+    # 对应 MultiModelConfig.qwenChatModel 上的 @ConditionalOnProperty。
     qwen:
+      enabled: false
       api-key: ${DASHSCOPE_API_KEY:sk-change-me}
       base-url: ${DASHSCOPE_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}
       model: ${DASHSCOPE_CHAT_MODEL:qwen-plus}
@@ -94,3 +107,11 @@ logging:
   level:
     org.springframework.ai: INFO
     com.edy.firstai: DEBUG
+    # ---- 防 API Key 泄漏到日志 ----
+    # Spring AI 2.0 OpenAI 底层走 OkHttp。OkHttp 的 HttpLoggingInterceptor 在 DEBUG/TRACE
+    # 会打印完整请求头，包含 Authorization: Bearer <api-key>。
+    # 显式把 OkHttp 压到 INFO，避免有人全局开 DEBUG（logging.level.root=DEBUG）时把 key 打到控制台/文件。
+    # 同理压制 Spring Web 的 RestClient/WebClient 请求日志（DeepSeek 用它）。
+    okhttp3: INFO
+    org.springframework.web.client.RestClient: INFO
+    org.springframework.web.reactive.function.client.WebClient: INFO

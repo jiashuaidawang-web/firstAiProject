@@ -11,11 +11,14 @@ import org.springframework.ai.model.chat.client.autoconfigure.ChatClientBuilderC
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -89,16 +92,26 @@ public class MultiModelConfig {
 
     /**
      * DeepSeek：注入具体类型 {@link DeepSeekChatModel}，避免 ChatModel 接口歧义。
+     * <p>
+     * <b>阶段 0 可选 Provider</b>：DeepSeek 是否能成为 bean，取决于
+     * {@code DeepSeekChatAutoConfiguration} 的 {@code @ConditionalOnProperty(spring.ai.model.chat=deepseek)}。
+     * 这里用 {@link ObjectProvider}，model 不存在时返回 {@code null}（不创建 client），
+     * 应用照常启动——「未配置的 Provider 不让启动失败」。
      */
     @Bean
     public ChatClient deepSeekChatClient(
-            DeepSeekChatModel deepSeekChatModel,
+            ObjectProvider<DeepSeekChatModel> deepSeekChatModel,
             ChatClientBuilderConfigurer configurer,
             ObjectProvider<ObservationRegistry> observationRegistry,
             ObjectProvider<ChatClientObservationConvention> chatClientObservationConvention,
             ObjectProvider<AdvisorObservationConvention> advisorObservationConvention) {
+
+        DeepSeekChatModel model = deepSeekChatModel.getIfAvailable();
+        if (model == null) {
+            return null; // DeepSeek 未配置/未激活：不创建该 client，路由器里也不会出现
+        }
         return buildChatClient(
-                deepSeekChatModel,
+                model,
                 configurer,
                 observationRegistry,
                 chatClientObservationConvention,
@@ -110,8 +123,12 @@ public class MultiModelConfig {
      * <p>
      * 这是架构上极重要的能力：大量国产 / 开源推理网关都兼容 OpenAI 协议，
      * 你可以用同一套 ChatClient 代码切换 Provider，而不改业务层。
+     * <p>
+     * <b>阶段 0 可选 Provider</b>：由 {@code app.ai.qwen.enabled} 开关控制，默认 false。
+     * 未显式开启时，Qwen 的 model / client bean 都不创建，应用启动只依赖 LongCat。
      */
     @Bean
+    @ConditionalOnProperty(name = "app.ai.qwen.enabled", havingValue = "true")
     public ChatModel qwenChatModel(
             @Value("${app.ai.qwen.api-key}") String apiKey,
             @Value("${app.ai.qwen.base-url}") String baseUrl,
@@ -162,31 +179,45 @@ public class MultiModelConfig {
 
     @Bean
     public ChatClient qwenChatClient(
-            ChatModel qwenChatModel,
+            @Qualifier("qwenChatModel") ObjectProvider<ChatModel> qwenChatModel,
             ChatClientBuilderConfigurer configurer,
             ObjectProvider<ObservationRegistry> observationRegistry,
             ObjectProvider<ChatClientObservationConvention> chatClientObservationConvention,
             ObjectProvider<AdvisorObservationConvention> advisorObservationConvention) {
+
+        // qwenChatModel bean 仅在 app.ai.qwen.enabled=true 时存在；未开启则返回 null
+        ChatModel model = qwenChatModel.getIfAvailable();
+        if (model == null) {
+            return null;
+        }
         return buildChatClient(
-                qwenChatModel,
+                model,
                 configurer,
                 observationRegistry,
                 chatClientObservationConvention,
                 advisorObservationConvention);
     }
 
+    /**
+     * 路由器：只把「实际存在」的 client 注册进去。
+     * <p>
+     * 用 {@link ObjectProvider} + {@code @Qualifier} 接收 DeepSeek / Qwen —— 它们可能为 null
+     * （未配置 / 未开启），{@link ObjectProvider#getIfAvailable()} 此时返回 null。
+     * 注意必须按 bean 名限定：若只写 {@code ObjectProvider<ChatClient>}，Spring 会取
+     * {@code @Primary} 的 openAiChatClient，而非我们要的 deepSeek/qwen client。
+     * {@link Map#of} 不允许 null value，所以这里用 {@link HashMap} 手工 put 非空项。
+     */
     @Bean
     public ModelRouter modelRouter(
-            ChatClient openAiChatClient,
-            ChatClient deepSeekChatClient,
-            ChatClient qwenChatClient) {
-        return new ModelRouter(Map.of(
-                // 路由名 longcat：底层仍是 OpenAiChatModel，指向 LongCat OpenAI 兼容端点
-                "longcat", openAiChatClient,
-                "openai", openAiChatClient, // 别名，兼容旧调用
-                "deepseek", deepSeekChatClient,
-                "qwen", qwenChatClient
-        ));
+            @Qualifier("openAiChatClient") ChatClient openAiChatClient,
+            @Qualifier("deepSeekChatClient") ObjectProvider<ChatClient> deepSeekChatClient,
+            @Qualifier("qwenChatClient") ObjectProvider<ChatClient> qwenChatClient) {
+        Map<String, ChatClient> routes = new HashMap<>();
+        routes.put("longcat", openAiChatClient);
+        routes.put("openai", openAiChatClient); // 别名，兼容旧调用
+        deepSeekChatClient.ifAvailable(c -> routes.put("deepseek", c));
+        qwenChatClient.ifAvailable(c -> routes.put("qwen", c));
+        return new ModelRouter(routes);
     }
 
     /**

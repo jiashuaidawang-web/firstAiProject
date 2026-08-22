@@ -7,7 +7,6 @@ import org.springframework.core.retry.RetryTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -44,12 +43,15 @@ public class MultiModelChatService {
     }
 
     /**
-     * A/B / 评测场景：同一 prompt 打多个模型，便于人工或自动评估。
+     * A/B / 评测场景：同一 prompt 打多个<b>可用</b>模型，便于人工或自动评估。
      * 评估体系可参考：LLM-as-a-Judge（Zheng et al., "Judging LLM-as-a-Judge...", NeurIPS 2023）
+     * <p>
+     * 迭代：不再硬编码模型列表，改为从 {@link ModelRouter#availableModels()} 取——
+     * 未配置 / 未开启的 Provider（阶段 0 的 DeepSeek / Qwen）不会出现，也就不会误触。
      */
     public Map<String, String> compareModels(String prompt) {
         Map<String, String> results = new HashMap<>();
-        for (String modelName : List.of("longcat", "deepseek", "qwen")) {
+        for (String modelName : modelRouter.availableModels()) {
             try {
                 results.put(modelName, chatWithModel(modelName, prompt));
             } catch (Exception e) {
