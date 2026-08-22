@@ -41,7 +41,7 @@ public class ChatController {
      * 注入名为 openAiChatClient 的 Bean（见 {@link com.edy.firstai.config.MultiModelConfig}）。
      * 多模型场景下不要依赖自动配置的单例 Builder，以免 ChatModel 歧义。
      */
-    public ChatController(@Qualifier("openAiChatClient") ChatClient chatClient) {
+    public ChatController(@Qualifier("longCatChatClient") ChatClient chatClient) {
         this.chatClient = chatClient;
     }
 

@@ -3,7 +3,6 @@ package com.edy.firstai.config;
 import com.edy.firstai.multimodel.ModelRouter;
 import io.micrometer.observation.ObservationRegistry;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.ToolCallingAdvisor;
 import org.springframework.ai.chat.client.advisor.observation.AdvisorObservationConvention;
 import org.springframework.ai.chat.client.observation.ChatClientObservationConvention;
 import org.springframework.ai.chat.model.ChatModel;
@@ -79,15 +78,13 @@ public class MultiModelConfig {
             ChatClientBuilderConfigurer configurer,
             ObjectProvider<ObservationRegistry> observationRegistry,
             ObjectProvider<ChatClientObservationConvention> chatClientObservationConvention,
-            ObjectProvider<AdvisorObservationConvention> advisorObservationConvention,
-            ObjectProvider<ToolCallingAdvisor.Builder<?>> toolCallingAdvisorBuilder) {
+            ObjectProvider<AdvisorObservationConvention> advisorObservationConvention) {
         return buildChatClient(
                 openAiChatModel,
                 configurer,
                 observationRegistry,
                 chatClientObservationConvention,
-                advisorObservationConvention,
-                toolCallingAdvisorBuilder);
+                advisorObservationConvention);
     }
 
     /**
@@ -99,15 +96,13 @@ public class MultiModelConfig {
             ChatClientBuilderConfigurer configurer,
             ObjectProvider<ObservationRegistry> observationRegistry,
             ObjectProvider<ChatClientObservationConvention> chatClientObservationConvention,
-            ObjectProvider<AdvisorObservationConvention> advisorObservationConvention,
-            ObjectProvider<ToolCallingAdvisor.Builder<?>> toolCallingAdvisorBuilder) {
+            ObjectProvider<AdvisorObservationConvention> advisorObservationConvention) {
         return buildChatClient(
                 deepSeekChatModel,
                 configurer,
                 observationRegistry,
                 chatClientObservationConvention,
-                advisorObservationConvention,
-                toolCallingAdvisorBuilder);
+                advisorObservationConvention);
     }
 
     /**
@@ -136,21 +131,48 @@ public class MultiModelConfig {
                 .build();
     }
 
+    /**
+     * 先创建longCat的baseModel,然后在buildLongCat的Client
+     * **/
+    @Bean
+    public ChatModel longCatChatMode(){
+        return OpenAiChatModel.builder().options(OpenAiChatOptions.builder()
+                .baseUrl("https://api.longcat.chat/openai")
+                .apiKey("ak_2go1Wb4e66uV3cz7Ek7FS9qL4F58c")
+                .model("LongCat-2.0")
+                .temperature(0.1d)
+                .build()
+        ).build();
+    }
+
+    @Bean
+    public ChatClient longCatChatClient(
+            ChatModel longCatChatMode,
+            ChatClientBuilderConfigurer configurer,
+            ObjectProvider<ObservationRegistry> observationRegistry,
+            ObjectProvider<ChatClientObservationConvention> chatClientObservationConvention,
+            ObjectProvider<AdvisorObservationConvention> advisorObservationConvention) {
+        return buildChatClient(
+                longCatChatMode,
+                configurer,
+                observationRegistry,
+                chatClientObservationConvention,
+                advisorObservationConvention);
+    }
+
     @Bean
     public ChatClient qwenChatClient(
             ChatModel qwenChatModel,
             ChatClientBuilderConfigurer configurer,
             ObjectProvider<ObservationRegistry> observationRegistry,
             ObjectProvider<ChatClientObservationConvention> chatClientObservationConvention,
-            ObjectProvider<AdvisorObservationConvention> advisorObservationConvention,
-            ObjectProvider<ToolCallingAdvisor.Builder<?>> toolCallingAdvisorBuilder) {
+            ObjectProvider<AdvisorObservationConvention> advisorObservationConvention) {
         return buildChatClient(
                 qwenChatModel,
                 configurer,
                 observationRegistry,
                 chatClientObservationConvention,
-                advisorObservationConvention,
-                toolCallingAdvisorBuilder);
+                advisorObservationConvention);
     }
 
     @Bean
@@ -169,21 +191,30 @@ public class MultiModelConfig {
 
     /**
      * 官方推荐的「保留可观测性」构建方式。
+     * <p>
+     * 阶段 0 明确禁止 Tool Calling，因此使用 4 参数 {@link ChatClient#builder} 重载
+     * （ObservationRegistry + 两个 ObservationConvention），<b>不</b>传入第 5 参数
+     * {@code ToolCallingAdvisor.Builder}。
+     * <p>
+     * 三对照：
+     * <ul>
+     *   <li>1 参数 builder：连 Observation 都丢掉 —— 不可取</li>
+     *   <li>4 参数 builder：保留 Observation，无 Tool Calling —— 阶段 0 正确选择</li>
+     *   <li>5 参数 builder：额外装配 ToolCallingAdvisor —— 阶段 0 禁止</li>
+     * </ul>
      */
     private ChatClient buildChatClient(
             ChatModel chatModel,
             ChatClientBuilderConfigurer configurer,
             ObjectProvider<ObservationRegistry> observationRegistry,
             ObjectProvider<ChatClientObservationConvention> chatClientObservationConvention,
-            ObjectProvider<AdvisorObservationConvention> advisorObservationConvention,
-            ObjectProvider<ToolCallingAdvisor.Builder<?>> toolCallingAdvisorBuilder) {
+            ObjectProvider<AdvisorObservationConvention> advisorObservationConvention) {
 
         ChatClient.Builder builder = ChatClient.builder(
                 chatModel,
                 observationRegistry.getIfUnique(() -> ObservationRegistry.NOOP),
                 chatClientObservationConvention.getIfUnique(),
-                advisorObservationConvention.getIfUnique(),
-                toolCallingAdvisorBuilder.getIfAvailable());
+                advisorObservationConvention.getIfUnique());
 
         return configurer.configure(builder).build();
     }

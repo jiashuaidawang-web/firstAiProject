@@ -35,7 +35,7 @@ public class StructuredOutputController {
 
     private final ChatClient chatClient;
 
-    public StructuredOutputController(@Qualifier("openAiChatClient") ChatClient chatClient) {
+    public StructuredOutputController(@Qualifier("longCatChatClient") ChatClient chatClient) {
         this.chatClient = chatClient;
     }
 

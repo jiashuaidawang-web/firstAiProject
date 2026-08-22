@@ -43,7 +43,7 @@ public class StreamChatController {
 
     private final ChatClient chatClient;
 
-    public StreamChatController(@Qualifier("openAiChatClient") ChatClient chatClient) {
+    public StreamChatController(@Qualifier("longCatChatClient") ChatClient chatClient) {
         this.chatClient = chatClient;
     }
 
@@ -53,6 +53,7 @@ public class StreamChatController {
      * 纠正常见误区：{@code .stream().content()} 返回的是 {@link Flux}&lt;{@link String}&gt;，
      * 不是 {@code Flux&lt;ChatResponse&gt;}。要 ChatResponse 请用 {@code .stream().chatResponse()}。
      */
+
     @GetMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> streamChat(@RequestParam String prompt) {
         return chatClient.prompt()
