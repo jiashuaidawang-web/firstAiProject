@@ -84,6 +84,13 @@ spring:
 #   https://help.aliyun.com/zh/model-studio/developer-reference/compatibility-of-openai-with-dashscope
 app:
   ai:
+    # 行情 HTTP 数据源 base-url（阶段 1 真实行情接口）
+    # host 即 CK 同机；无认证；GET 直连
+    market:
+      base-url: ${MARKET_BASE_URL:http://localhost:8090/api/v1}
+    # Agent 工具循环上限（防死循环）
+    quant:
+      max-tool-calls: 5
     # 是否启用通义千问 Provider。默认 false：qwenChatModel / qwenChatClient bean 都不创建，
     # 应用启动只依赖 LongCat。显式设 true 并配好下方 key 后才会出现。
     # 对应 MultiModelConfig.qwenChatModel 上的 @ConditionalOnProperty。

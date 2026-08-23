@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 /**
  * 阶段 1 行情验收接口。
  *
@@ -25,7 +27,7 @@ public class MarketController {
     }
 
     @GetMapping("/market")
-    public String market(@RequestParam String symbol) {
+    public Map<String, Object> market(@RequestParam String symbol) {
         return marketDataAgent.queryMarket(symbol);
     }
 }
