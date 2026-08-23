@@ -10,6 +10,7 @@ import org.springframework.web.client.RestClient;
 import com.edy.firstai.quant.tool.ToolQualityCollector;
 
 import java.util.List;
+import java.util.Map;
 import java.time.Duration;
 
 /**
@@ -110,24 +111,32 @@ public class MarketDataClient {
 
     /** GET 请求，可选采集质量 */
     public <T> Result<T> get(String path, Class<T> clazz, ToolQualityCollector collector) {
+        long start = System.currentTimeMillis();
+        log.info("[工具HTTP] ▶ 开始请求 | path={}", path);
         try {
             T body = restClient.get()
                     .uri(path)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (request, response) -> {
-                        log.warn("[行情 HTTP] 错误状态码: {} path={}", response.getStatusCode(), path);
+                        log.warn("[工具HTTP] 错误状态码: {} path={}", response.getStatusCode(), path);
                     })
                     .body(clazz);
+            long elapsed = System.currentTimeMillis() - start;
             if (body == null) {
+                log.info("[工具HTTP] ■ 结束 | 耗时: {}ms | 结果: 空(204)", elapsed);
                 Result<T> r = Result.empty("无数据(204): " + path);
                 if (collector != null) collector.record(r.quality());
                 return r;
             }
+            int size = body instanceof Map ? ((Map<?, ?>) body).size()
+                    : body instanceof List ? ((List<?>) body).size() : 1;
+            log.info("[工具HTTP] ■ 结束 | 耗时: {}ms | 结果: {} 条/字段", elapsed, size);
             Result<T> r = Result.real(body);
             if (collector != null) collector.record(r.quality());
             return r;
         } catch (Exception e) {
-            log.error("[行情 HTTP] 请求异常: {} path={}", e.getMessage(), path);
+            long elapsed = System.currentTimeMillis() - start;
+            log.error("[工具HTTP] ■ 异常 | 耗时: {}ms | 错误: {}", elapsed, e.getMessage());
             Result<T> r = Result.fail("接口异常: " + e.getMessage());
             if (collector != null) collector.record(r.quality());
             return r;
@@ -141,17 +150,24 @@ public class MarketDataClient {
 
     /** GET 返回 List，可选采集质量 */
     public Result<List<Object>> getList(String path, ToolQualityCollector collector) {
+        long start = System.currentTimeMillis();
+        log.info("[工具HTTP] ▶ 开始请求 | path={}", path);
         try {
             List<Object> body = restClient.get()
                     .uri(path)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (request, response) ->
-                            log.warn("[行情 HTTP] 错误状态码: {} path={}", response.getStatusCode(), path))
+                            log.warn("[工具HTTP] 错误状态码: {} path={}", response.getStatusCode(), path))
                     .body(new ParameterizedTypeReference<List<Object>>() {});
+            long elapsed = System.currentTimeMillis() - start;
             Result<List<Object>> r = body == null ? Result.empty("无数据: " + path) : Result.real(body);
+            log.info("[工具HTTP] ■ 结束 | 耗时: {}ms | 结果: {} 条", elapsed,
+                    body == null ? 0 : body.size());
             if (collector != null) collector.record(r.quality());
             return r;
         } catch (Exception e) {
+            long elapsed = System.currentTimeMillis() - start;
+            log.error("[工具HTTP] ■ 异常 | 耗时: {}ms | 错误: {}", elapsed, e.getMessage());
             Result<List<Object>> r = Result.fail("接口异常: " + e.getMessage());
             if (collector != null) collector.record(r.quality());
             return r;
