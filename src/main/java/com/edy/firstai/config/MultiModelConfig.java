@@ -1,13 +1,17 @@
 package com.edy.firstai.config;
 
 import com.edy.firstai.multimodel.ModelRouter;
+import com.edy.firstai.quant.tool.MaxToolCallsEligibilityChecker;
 import io.micrometer.observation.ObservationRegistry;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.ToolCallingAdvisor;
 import org.springframework.ai.chat.client.advisor.observation.AdvisorObservationConvention;
 import org.springframework.ai.chat.client.observation.ChatClientObservationConvention;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.ai.model.chat.client.autoconfigure.ChatClientBuilderConfigurer;
+import org.springframework.ai.model.tool.ToolExecutionEligibilityChecker;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.ObjectProvider;
@@ -69,10 +73,39 @@ public class MultiModelConfig {
     }
 
     /**
+     * 阶段 1：Tool Calling 装配。
+     * <p>
+     * 阶段 0 用 4 参数 {@link ChatClient#builder}（无 Tool Calling）；
+     * 阶段 1 要开 Tool Calling，必须回到 <b>5 参数重载</b>，第 5 参传入
+     * {@link ToolCallingAdvisor.Builder}。这是阶段 0→1 最关键的 API 变化。
+     * <p>
+     * maxToolCalls 守卫：Spring AI 2.0.0 公开 API 没有 maxToolCalls，
+     * 这里通过 {@link ToolCallingAdvisor.Builder#toolExecutionEligibilityChecker} 注入
+     * {@link MaxToolCallsEligibilityChecker}，在工具循环门控上叠加计数，超限强制终止防死循环。
+     * <p>
+     * 注意：5 参数 builder 要的是 {@code ToolCallingAdvisor.Builder<?>}，
+     * 所以这里暴露 {@code builder()} 而非构造好的 advisor 实例。
+     */
+    @Bean
+    public ToolCallingAdvisor.Builder<?> toolCallingAdvisorBuilder(
+            @Value("${app.ai.quant.max-tool-calls:5}") int maxToolCalls) {
+        // 默认门控：沿用 Spring AI「响应是否包含工具调用」的内置判断
+        // （assistant 消息的 hasToolCalls() 为 true → 需要执行工具）
+        ToolExecutionEligibilityChecker defaultChecker = chatResponse ->
+                chatResponse != null
+                        && chatResponse.getResult() != null
+                        && chatResponse.getResult().getOutput() instanceof AssistantMessage assistant
+                        && assistant.hasToolCalls();
+        // 包一层计数守卫
+        MaxToolCallsEligibilityChecker guard = new MaxToolCallsEligibilityChecker(defaultChecker, maxToolCalls);
+        return ToolCallingAdvisor.builder()
+                .toolExecutionEligibilityChecker(guard);
+    }
+
+    /**
      * 默认（Primary）ChatClient：对接 spring.ai.openai.*（本项目默认指向 LongCat）。
      * <p>
-     * LongCat 完全兼容 OpenAI Chat Completions，因此复用 OpenAiChatModel 即可，
-     * 只需改 base-url / api-key / model。这是 AI 应用架构里最常见的「协议兼容接入」模式。
+     * 阶段 1 起装配 Tool Calling（5 参数 builder + {@link ToolCallingAdvisor}）。
      */
     @Bean
     @Primary
@@ -81,13 +114,15 @@ public class MultiModelConfig {
             ChatClientBuilderConfigurer configurer,
             ObjectProvider<ObservationRegistry> observationRegistry,
             ObjectProvider<ChatClientObservationConvention> chatClientObservationConvention,
-            ObjectProvider<AdvisorObservationConvention> advisorObservationConvention) {
+            ObjectProvider<AdvisorObservationConvention> advisorObservationConvention,
+            ToolCallingAdvisor.Builder<?> toolCallingAdvisorBuilder) {
         return buildChatClient(
                 openAiChatModel,
                 configurer,
                 observationRegistry,
                 chatClientObservationConvention,
-                advisorObservationConvention);
+                advisorObservationConvention,
+                toolCallingAdvisorBuilder);
     }
 
     /**
@@ -223,16 +258,12 @@ public class MultiModelConfig {
     /**
      * 官方推荐的「保留可观测性」构建方式。
      * <p>
-     * 阶段 0 明确禁止 Tool Calling，因此使用 4 参数 {@link ChatClient#builder} 重载
-     * （ObservationRegistry + 两个 ObservationConvention），<b>不</b>传入第 5 参数
-     * {@code ToolCallingAdvisor.Builder}。
-     * <p>
-     * 三对照：
+     * 两代：
      * <ul>
-     *   <li>1 参数 builder：连 Observation 都丢掉 —— 不可取</li>
-     *   <li>4 参数 builder：保留 Observation，无 Tool Calling —— 阶段 0 正确选择</li>
-     *   <li>5 参数 builder：额外装配 ToolCallingAdvisor —— 阶段 0 禁止</li>
+     *   <li>阶段 0（4 参数）：保留 Observation，<b>无</b> Tool Calling</li>
+     *   <li>阶段 1（5 参数）：第 5 参传入 {@link ToolCallingAdvisor}，开启工具调用</li>
      * </ul>
+     * 其它 client（deepSeek/qwen）仍走 4 参数——阶段 1 只需给主模型开 Tool Calling。
      */
     private ChatClient buildChatClient(
             ChatModel chatModel,
@@ -246,6 +277,25 @@ public class MultiModelConfig {
                 observationRegistry.getIfUnique(() -> ObservationRegistry.NOOP),
                 chatClientObservationConvention.getIfUnique(),
                 advisorObservationConvention.getIfUnique());
+
+        return configurer.configure(builder).build();
+    }
+
+    /** 阶段 1：5 参数重载，装配 ToolCallingAdvisor */
+    private ChatClient buildChatClient(
+            ChatModel chatModel,
+            ChatClientBuilderConfigurer configurer,
+            ObjectProvider<ObservationRegistry> observationRegistry,
+            ObjectProvider<ChatClientObservationConvention> chatClientObservationConvention,
+            ObjectProvider<AdvisorObservationConvention> advisorObservationConvention,
+            ToolCallingAdvisor.Builder<?> toolCallingAdvisorBuilder) {
+
+        ChatClient.Builder builder = ChatClient.builder(
+                chatModel,
+                observationRegistry.getIfUnique(() -> ObservationRegistry.NOOP),
+                chatClientObservationConvention.getIfUnique(),
+                advisorObservationConvention.getIfUnique(),
+                toolCallingAdvisorBuilder);
 
         return configurer.configure(builder).build();
     }
