@@ -51,6 +51,11 @@ public class ToolQualityCollector {
         return qualities.get().contains(MarketDataClient.Quality.FAIL);
     }
 
+    /** 是否有 EMPTY（Agent 据此给出 PARTIAL 降级文案） */
+    public boolean hasEmpty() {
+        return qualities.get().contains(MarketDataClient.Quality.EMPTY);
+    }
+
     /** 清理，防 ThreadLocal 泄漏 */
     public void clear() {
         qualities.remove();

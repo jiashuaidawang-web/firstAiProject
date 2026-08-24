@@ -32,7 +32,7 @@ public class FundFlowProvider {
         if (top != null) {
             path += (has ? "&" : "?") + "top=" + top;
         }
-        return client.getList(path);
+        return client.getList("getFundFlowBoard", path);
     }
 
     @Tool(name = "getDragonTiger", description = "龙虎榜个股：上榜原因、解读、净买/总买/总卖、上榜成交额、涨跌幅、收盘价、换手率、流通市值。symbol(6位数字) 可选。")
@@ -46,7 +46,7 @@ public class FundFlowProvider {
         if (date != null && !date.isBlank()) {
             path += (has ? "&" : "?") + "date=" + date;
         }
-        return client.getList(path);
+        return client.getList("getDragonTiger", path);
     }
 
     @Tool(name = "getDragonTigerDetail", description = "龙虎榜席位买卖明细：席位名、类型、排名、买/卖/净买、净买占比、成交额。必传 symbol(6位数字)。")
@@ -54,6 +54,6 @@ public class FundFlowProvider {
         String tsCode = client.toTsCode(symbol); // 必传，校验
         String path = "/fund-flow/dragon-tiger/detail?tsCode=" + tsCode;
         if (date != null && !date.isBlank()) path += "&date=" + date;
-        return client.getList(path);
+        return client.getList("getDragonTigerDetail", path);
     }
 }

@@ -28,7 +28,7 @@ public class MainForceProvider {
         if (date != null && !date.isBlank()) {
             path += (has ? "&" : "?") + "date=" + date;
         }
-        return client.getList(path);
+        return client.getList("getMainForceStocks", path);
     }
 
     @Tool(name = "getMainForceSeats", description = "抱团席位：同席位跨多股净买。返回席位名、类型（机构/营业部/沪股通）、涉及个股数、净买合计、涉及股票代码列表。symbol 可传空。")
@@ -42,6 +42,6 @@ public class MainForceProvider {
         if (date != null && !date.isBlank()) {
             path += (has ? "&" : "?") + "date=" + date;
         }
-        return client.getList(path);
+        return client.getList("getMainForceSeats", path);
     }
 }

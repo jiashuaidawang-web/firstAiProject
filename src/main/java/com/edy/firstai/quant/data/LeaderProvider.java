@@ -28,7 +28,7 @@ public class LeaderProvider {
         if (date != null && !date.isBlank()) {
             path += (has ? "&" : "?") + "date=" + date;
         }
-        return client.getList(path);
+        return client.getList("getLeaders", path);
     }
 
     @Tool(name = "getTradeIdea", description = "龙头买卖建议：买卖动作（买入/低吸/持有/减仓/卖出/观望）、买卖信号、风险等级、买卖评分、理由。可按 symbol(6位数字) 过滤。")
@@ -42,7 +42,7 @@ public class LeaderProvider {
         if (date != null && !date.isBlank()) {
             path += (has ? "&" : "?") + "date=" + date;
         }
-        return client.getList(path);
+        return client.getList("getTradeIdea", path);
     }
 
     @Tool(name = "getMainline", description = "主线板块列表：板块代码/名称、主线层级（一线/二线/三线）、综合强度、排名。symbol 可传空。")
@@ -56,6 +56,6 @@ public class LeaderProvider {
         if (date != null && !date.isBlank()) {
             path += (has ? "&" : "?") + "date=" + date;
         }
-        return client.getList(path);
+        return client.getList("getMainline", path);
     }
 }

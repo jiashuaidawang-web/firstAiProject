@@ -91,6 +91,13 @@ app:
     # Agent 工具循环上限（防死循环）
     quant:
       max-tool-calls: 5
+      # 故障注入（提示词 3 验收）：默认关闭（空 = 不注入）。
+      # 设为 @Tool name 后，对应工具会模拟故障，用于验证「降级文案 + 进程不空转」。
+      #   fault-timeout-tool: scanTrend   → scanTrend 抛 TimeoutException（模拟响应超时）
+      #   fault-empty-tool: getSentiment  → getSentiment 返回空 bar（模拟 204 无数据）
+      # 两个可同时设置，也可只设一个。进程不得空转由 maxToolCalls 兜底。
+      fault-timeout-tool: ${QUANT_FAULT_TIMEOUT_TOOL:}
+      fault-empty-tool: ${QUANT_FAULT_EMPTY_TOOL:}
     # 是否启用通义千问 Provider。默认 false：qwenChatModel / qwenChatClient bean 都不创建，
     # 应用启动只依赖 LongCat。显式设 true 并配好下方 key 后才会出现。
     # 对应 MultiModelConfig.qwenChatModel 上的 @ConditionalOnProperty。

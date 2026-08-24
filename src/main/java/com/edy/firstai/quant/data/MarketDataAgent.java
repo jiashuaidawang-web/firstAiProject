@@ -174,9 +174,11 @@ public class MarketDataAgent {
      * @return 带 quality 字段的 JSON：
      *         <ul>
      *           <li>quality=REAL：工具全部成功，answer 含真实数据</li>
-     *           <li>quality=FAIL：有工具失败，close=null，notice 提示数据不可用</li>
+     *           <li>quality=FAIL：有工具失败（超时/异常），close=null，notice 提示数据不可用</li>
      *           <li>quality=PARTIAL：部分工具无数据（204），answer 含可用部分</li>
      *         </ul>
+     *         <b>进程不空转保障</b>：工具循环受 maxToolCalls 上限约束（{@link MaxToolCallsEligibilityChecker}），
+     *         HTTP 受 responseTimeout 约束；即使所有工具都失败，也会在有限次调用后落到降级文案。
      */
     public Map<String, Object> queryMarket(String symbol) {
         log.info("[Agent 入口] queryMarket: symbol={}, maxToolCalls={}", symbol, maxToolCalls);
@@ -184,10 +186,11 @@ public class MarketDataAgent {
         // 必须先 clear：Tomcat 线程池复用线程，不清理会读到上次请求的残留 quality
         quality.clear();
 
+        String answer;
         try {
             // 把 7 个 Provider（~15 个工具）全部注册，让 LLM 按用户意图自主选工具。
             // 工具执行时 quality 被 MarketDataClient 自动采集，无需手动记录。
-            String answer = openAiChatClient.prompt()
+            answer = openAiChatClient.prompt()
                     .tools(trend, sentiment, leader, mainForce, fundFlow, theme, realtime)
                     .user(String.format(
                             "查询股票 %s 的行情，返回技术面、情绪面、资金面、龙头/主线信息。"
@@ -195,27 +198,41 @@ public class MarketDataAgent {
                             + "如果某类数据获取失败请如实说明，不要编造数据。", symbol))
                     .call()
                     .content();
-
-            // quality 由工具执行的真实结果决定，不是模型自报
-            String overallQuality = quality.overall();
-            log.info("[Agent 出口] symbol={}, quality={}, answerLen={}",
-                    symbol, overallQuality, answer != null ? answer.length() : 0);
-
-            Map<String, Object> response = new LinkedHashMap<>();
-            response.put("symbol", symbol);
-            response.put("quality", overallQuality);
-            response.put("answer", answer);
-
-            // FAIL 时绝不编造 close：显式置 null + 提示用户
-            if ("FAIL".equals(overallQuality)) {
-                response.put("close", null);
-                response.put("dataAvailable", false);
-                response.put("notice", "行情接口异常，数据暂不可用，请勿基于编造数据决策");
-            }
-            return response;
         } finally {
             // finally 里 clear：无论是否异常都要清理 ThreadLocal，防泄漏
             quality.clear();
         }
+
+        // quality 由工具执行的真实结果决定，不是模型自报
+        String overallQuality = quality.overall();
+        log.info("[Agent 出口] symbol={}, quality={}, answerLen={}, toolFail={}, toolEmpty={}",
+                symbol, overallQuality, answer != null ? answer.length() : 0,
+                quality.hasFail(), quality.hasEmpty());
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("symbol", symbol);
+        response.put("quality", overallQuality);
+        response.put("answer", (answer == null || answer.isBlank()) ? null : answer);
+
+        // —— 降级文案：用户必须收到明确的产品提示，而不是空对象或异常 ——
+        if ("FAIL".equals(overallQuality)) {
+            // 有工具失败（超时/异常）→ 绝不编造 close 等数据
+            response.put("close", null);
+            response.put("dataAvailable", false);
+            response.put("degraded", true);
+            response.put("notice", "行情接口异常（部分工具超时或报错），数据暂不可用，请勿基于编造数据决策");
+        } else if ("PARTIAL".equals(overallQuality)) {
+            // 无失败但部分工具无数据（204）→ 可用数据已进 answer，提示缺失
+            response.put("dataAvailable", true);
+            response.put("degraded", true);
+            response.put("notice", "部分行情数据源暂无数据（如情绪/资金接口返回空），已基于可用数据整理");
+        } else if (answer == null || answer.isBlank()) {
+            // 模型未给出最终回答（常见于 maxToolCalls 耗尽，最后一轮是未执行的工具调用）
+            response.put("quality", "DEGRADED");
+            response.put("dataAvailable", false);
+            response.put("degraded", true);
+            response.put("notice", "行情查询未能在工具调用上限内完成，数据不完整，请稍后重试或缩小查询范围");
+        }
+        return response;
     }
 }

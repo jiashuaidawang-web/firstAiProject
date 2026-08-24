@@ -28,6 +28,6 @@ public class ThemeProvider {
         if (date != null && !date.isBlank()) {
             path += (has ? "&" : "?") + "date=" + date;
         }
-        return client.getList(path);
+        return client.getList("getThemeFactor", path);
     }
 }

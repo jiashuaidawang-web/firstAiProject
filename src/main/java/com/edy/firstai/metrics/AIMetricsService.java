@@ -41,4 +41,23 @@ public class AIMetricsService {
         meterRegistry.timer("ai.chat.duration", "model", modelName)
                 .record(durationMs, TimeUnit.MILLISECONDS);
     }
+
+    /**
+     * 工具调用计数（提示词 3 验收指标）。
+     *
+     * <p>状态取值：
+     * <ul>
+     *   <li>success：HTTP 200 且拿到 body</li>
+     *   <li>empty：204 / null body，或故障注入的空 bar</li>
+     *   <li>timeout：故障注入的 TimeoutException，或真实读取超时</li>
+     *   <li>error：其它 HTTP 错误 / 异常</li>
+     * </ul>
+     */
+    public void recordToolCall(String tool, String status) {
+        meterRegistry.counter(
+                "quant.tool.calls",
+                "tool", tool != null ? tool : "unknown",
+                "status", status != null ? status : "unknown"
+        ).increment();
+    }
 }
