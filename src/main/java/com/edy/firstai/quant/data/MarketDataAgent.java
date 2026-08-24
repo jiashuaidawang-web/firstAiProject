@@ -190,7 +190,8 @@ public class MarketDataAgent {
             String answer = openAiChatClient.prompt()
                     .tools(trend, sentiment, leader, mainForce, fundFlow, theme, realtime)
                     .user(String.format(
-                            "请基于可用工具查询股票 %s 的行情，返回技术面、情绪面、资金面、龙头/主线信息。"
+                            "查询股票 %s 的行情，返回技术面、情绪面、资金面、龙头/主线信息。"
+                            + "重要：不要传 date 参数，让服务端自动使用最新交易日。"
                             + "如果某类数据获取失败请如实说明，不要编造数据。", symbol))
                     .call()
                     .content();
