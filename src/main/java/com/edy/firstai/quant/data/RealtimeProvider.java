@@ -26,7 +26,7 @@ public class RealtimeProvider {
         if (symbol != null && !symbol.isBlank()) {
             path += "?tsCode=" + client.toTsCode(symbol);
         }
-        return client.get(path, Map.class).cast();
+        return client.get("getRealtimeStatus", path, Map.class).cast();
     }
 
     @Tool(name = "getStage", description = "当前情绪阶段码。合法值：ICE/CHAOS/DIVERGE/DIVERGE_CONSENSUS/CONSENSUS/CLIMAX/STARTUP/REPAIR。symbol 可传空。")
@@ -35,6 +35,6 @@ public class RealtimeProvider {
         if (symbol != null && !symbol.isBlank()) {
             path += "?tsCode=" + client.toTsCode(symbol);
         }
-        return client.get(path, Map.class).cast();
+        return client.get("getStage", path, Map.class).cast();
     }
 }

@@ -29,7 +29,7 @@ public class SentimentProvider {
         if (date != null && !date.isBlank()) {
             path += (has ? "&" : "?") + "date=" + date;
         }
-        return client.get(path, Map.class).cast();
+        return client.get("getSentiment", path, Map.class).cast();
     }
 
     @Tool(name = "getOverview", description = "大势择时总览：四维度评分（技术/情绪/资金/政策）、牛熊周期、情绪温度、是否值得参与、策略建议。symbol 可传空。")
@@ -43,7 +43,7 @@ public class SentimentProvider {
         if (date != null && !date.isBlank()) {
             path += (has ? "&" : "?") + "date=" + date;
         }
-        return client.get(path, Map.class).cast();
+        return client.get("getOverview", path, Map.class).cast();
     }
 
     @Tool(name = "getLimitPool", description = "当日涨停股列表：代码、名称、所属板块、连板数、涨停风格（换手/一字/T字）、涨跌幅、成交额。symbol 可传空。")
@@ -61,6 +61,6 @@ public class SentimentProvider {
         if (minPos != null) {
             path += (has ? "&" : "?") + "minPos=" + minPos;
         }
-        return client.getList(path);
+        return client.getList("getLimitPool", path);
     }
 }
