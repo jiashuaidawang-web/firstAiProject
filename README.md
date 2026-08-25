@@ -1,3 +1,11 @@
+
+
+**我建议你的实际使用方式是：每天只打开当天的 Day-XX 文件，
+严格执行“理解 → AI 开发 → Review → 验收 → Git Commit”这个闭环。
+**这样你不是被 AI 带着复制代码，而是在真实项目中逐步建立 Agent 架构能力
+
+
+
 # First AI Project · Spring AI 2.0 ChatClient
 
 面向 **10 年 Java 架构师** 的 AI Agent 应用开发入门工程：用你熟悉的 Spring Boot 分层，把 LLM 接到生产级可观测、可路由、可重试的服务骨架上。
